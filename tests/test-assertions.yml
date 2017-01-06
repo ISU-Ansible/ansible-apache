@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  remote_user: root
+
+  vars:
+    authkeys_public_keys:
+      - username: "root-root"
+        destination: "root"
+        public_key: "ssh-rsa root1 root-root"
+      - username: "root-root-1"
+        destination: "root"
+        public_key: "ssh-rsa root2 root-root-1"
+
+    authkeys_enabled:
+       - "root-root"
+
+  roles:
+    - role_under_test

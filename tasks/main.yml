@@ -1,0 +1,84 @@
+---
+  - name: APACHE | Include OS-specific variables.
+    include_vars: "{{item}}"
+    with_first_found:
+      - "{{ansible_distribution}}_{{ansible_distribution_major_version}}_{{ansible_distribution_minor_version}}.yml"
+      - "{{ansible_distribution}}_{{ansible_distribution_major_version}}.yml"
+      - "{{ansible_distribution}}.yml"
+      - "{{ansible_os_family}}_{{ansible_distribution_major_version}}_{{ansible_distribution_minor_version}}.yml"
+      - "{{ansible_os_family}}_{{ansible_distribution_major_version}}.yml"
+      - "{{ansible_os_family}}.yml"
+      - default.yml
+    tags:
+      - opensshd
+
+  # Package Installation
+  - name: APACHE | Install Packages
+    package:
+      name: "{{item}}"
+      state: present
+    with_flattened:
+      - "{{apache_packages}}"
+      - "{{apache_packages_extra}}"
+
+  # General Configuration Steps
+  - name: APACHE | Configure Apache sites-enabled includes for Virtual Hosts
+    lineinfile:
+      dest: "{{ apache_server_root }}/conf/{{ apache_daemon }}.conf"
+      regexp: "^(Incl.* sites-enabled.*)$"
+      line: "IncludeOptional sites-enabled/*"
+      state: present
+      validate: '{{apache_binary_path}} -f %s -S'
+    notify: Restart apache
+
+  - name: APACHE | Configure Vhost Ports (Apache 2.2)
+    replace:
+      dest: "{{ apache_server_root }}/conf/{{ apache_daemon }}.conf"
+      regexp: "(\nNameVirtualHost [^\n]+)+"
+      replace: "{% for item in apache_listen_ports %}\nNameVirtualHost *:{{ item }}{% endfor %}"
+      validate: '{{apache_binary_path}} -f %s -S'
+    notify: Restart apache
+
+  - name: APACHE | Configure Apache listening Ports
+    replace:
+      dest: "{{ apache_server_root }}/conf/{{ apache_daemon }}.conf"
+      regexp: "^(Listen .*)$"
+      replace: "{% for item in apache_listen_ports %}Listen {{ item }}{% endfor %}"
+      validate: '{{apache_binary_path}} -f %s -S'
+    notify: Restart apache
+
+  # Virtual Host Configuration
+  - name: Create apache vhost
+    template:
+      src: vhosts.j2
+      dest: "{{ apache_sites_available_path }}/{{ item.ServerName }}.{{ item.Port }}.conf"
+      owner: root
+      mode: 0644
+    with_items: "{{apache_vhosts}}"
+    notify: Restart apache
+    when: apache_enable_vhosts is defined and apache_enable_vhosts == true
+
+  - name: Enable vhosts
+    command: /etc/httpd/bin/a2ensite {{ item.ServerName }}.{{ item.Port }}.conf
+    with_items: "{{apache_vhosts}}"
+    ignore_errors: yes
+    register: echo
+    notify: Restart apache
+    when: apache_enable_vhosts is defined and apache_enable_vhosts == true
+
+  - name: Create vhost directories
+    file:
+      path: "{{ item.DocumentRoot }}"
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+    with_items: "{{apache_vhosts}}"
+    when: apache_enable_vhosts is defined and apache_enable_vhosts == true
+
+  # Service Configuration
+  - name: Enable and Start Apache daemon
+    service:
+      name: "{{ apache_daemon }}"
+      state: started
+      enabled: yes

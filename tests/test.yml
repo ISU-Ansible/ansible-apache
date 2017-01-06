@@ -1,0 +1,27 @@
+---
+- hosts: localhost
+  remote_user: root
+
+  # authkeys_public_keys:
+  #   - username: "root-root"
+  #     destination: "root"
+  #     public_key: "ssh-rsa key comment"
+
+  # authkeys_enabled:
+  #    - "root-root"
+
+  vars:
+    authkeys_public_keys:
+      - username: "root-root"
+        destination: "root"
+        public_key: "ssh-rsa blahblahblah root-root"
+      - username: "root-root-1"
+        destination: "root"
+        public_key: "ssh-rsa halbhalbhalb root-root-1"
+
+    authkeys_enabled:
+       - "root-root"
+       - "root-root-1"
+
+  roles:
+    - role_under_test
