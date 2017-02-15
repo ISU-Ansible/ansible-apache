@@ -15,7 +15,8 @@ services:
   - docker
 
 before_install:
-  - 'docker pull geerlingguy/docker-${distro}-ansible:latest'
+  - 'docker pull isuansible/docker-${distro}-ansible:latest'
+
 
 script:
   - container_id=$(mktemp)
@@ -39,22 +40,18 @@ script:
     || (echo 'Idempotence test: fail' && exit 1)
 
   # Test assertions.
-  - 'docker exec --tty "$(cat ${container_id})" env TERM=xterm ansible-playbook /etc/ansible/roles/role_under_test/tests/test-assertions.yml'
+  #- 'docker exec --tty "$(cat ${container_id})" env TERM=xterm ansible-playbook /etc/ansible/roles/role_under_test/tests/test-assertions.yml'
 
-  - root1=$(mktemp)
-  - root2=$(mktemp)
-  - docker exec --tty "$(cat ${container_id})" env TERM=xterm grep root1 /root/.ssh/authorized_keys | tee -a ${root1}
-  - docker exec --tty "$(cat ${container_id})" env TERM=xterm grep root2 /root/.ssh/authorized_keys | tee -a ${root2}
-  - >
-    tail ${root1}
-    | grep -q 'root1'
-    && (echo "root1 found: pass" && exit 0)
-    || (echo "root1 not found: fail" && exit 1)
-  - >
-    tail ${root2}
-    | grep -q 'root2'
-    && (echo "root2 found: fail" && exit 1)
-    || (echo "root2 not found: fail" && exit 0)
 
 notifications:
+  email: false
+  irc:
+    channels:
+      - "chat.freenode.net#isudevops"
+    on_success: always
+    on_failure: change
+    use_notice: true
+    template:
+      - "%{repository_name}#%{build_number} [%{author}] (%{commit}): %{message} %{foo} "
+      - "Build details: %{build_url}"
   webhooks: https://galaxy.ansible.com/api/v1/notifications/
