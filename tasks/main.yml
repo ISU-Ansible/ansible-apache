@@ -10,7 +10,7 @@
       - "{{ansible_os_family}}.yml"
       - default.yml
     tags:
-      - opensshd
+      - configuration
 
   # Package Installation
   - name: APACHE | Install Packages
@@ -31,7 +31,7 @@
       validate: '{{apache_binary_path}} -f %s -S'
     notify: Restart apache
 
-  - name: APACHE | Configure Vhost Ports (Apache 2.2)
+  - name: APACHE | Configure Vhost Ports
     replace:
       dest: "{{ apache_server_root }}/conf/{{ apache_daemon }}.conf"
       regexp: "(\nNameVirtualHost [^\n]+)+"
@@ -51,7 +51,7 @@
   - name: Create apache vhost
     template:
       src: vhosts.j2
-      dest: "{{ apache_sites_available_path }}/{{ item.ServerName }}.{{ item.Port }}.conf"
+      dest: "{{apache_sites_available_path}}/{{item.ServerName}}.{{item.Port}}.conf"
       owner: root
       mode: 0644
     with_items: "{{apache_vhosts}}"
@@ -59,7 +59,9 @@
     when: apache_enable_vhosts is defined and apache_enable_vhosts == true
 
   - name: Enable vhosts
-    command: /etc/httpd/bin/a2ensite {{ item.ServerName }}.{{ item.Port }}.conf
+    file:
+      src: "{{apache_sites_available_path}}/{{item.ServerName}}.{{item.Port}}.conf"
+      dest: "{{apache_sites_enabled_path}}/{{item.ServerName}}.{{item.Port}}.conf"
     with_items: "{{apache_vhosts}}"
     ignore_errors: yes
     register: echo

@@ -1,10 +1,21 @@
 
 <VirtualHost *:{{ item.Port }}>
 {%  for k,v in item.iteritems() %}
-{%    if k != 'Directory' and k != 'Location' and k != 'Port' and k != 'Files' and k != 'LocationMatch' and k != 'Alias' and k != 'Manual' and k != 'Server' %}
+{%    if k != 'Directory' and
+         k != 'Location' and
+         k != 'Port' and
+         k != 'Files' and
+         k != 'LocationMatch' and
+         k != 'Alias' and
+         k != 'Manual' and
+         k != 'Server' %}
     {{k}} {{v}}
 {%    endif %}
 {%  endfor %}
+
+{%  if item.Manual is defined %}
+{{    item.Manual }}
+{%  endif %}
 
 {%  if item.Server is defined %}
 {%    for k1,v1 in item.Server %}
@@ -40,10 +51,6 @@
 {%    for file in item.Files %}
 {%      include "_partial/file.j2" %}
 {%    endfor %}
-{%  endif %}
-
-{%  if item.Manual is defined %}
-{{    item.Manual }}
 {%  endif %}
 
 </VirtualHost>
